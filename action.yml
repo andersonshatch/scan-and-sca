@@ -161,7 +161,7 @@ runs:
     - name: Run Contrast SCA Action
       id: sca-scan
       if: ${{ inputs.runSca == 'true' }}
-      uses: ./contrast-sca-action
+      uses: Contrast-Security-OSS/contrast-sca-action@main
       with:
         apiKey: ${{ inputs.apiKey }}
         authHeader: ${{ steps.auth-header.outputs.auth_header }}
@@ -191,7 +191,7 @@ runs:
     - name: Run Contrast Local Scan Action
       id: local-scan
       if: ${{ inputs.runLocalScan == 'true' }}
-      uses: ./contrast-local-scan-action
+      uses: Contrast-Security-OSS/contrast-local-scan-action@main
       with:
         apiUrl: ${{ inputs.apiUrl }}
         apiUserName: ${{ inputs.apiUserName }}
