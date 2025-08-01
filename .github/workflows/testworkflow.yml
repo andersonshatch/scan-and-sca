@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Run Contrast Combined Scan
-        uses: andersonshatch/scan-and-sca/contrast-combined-action.yml@83c913c836fd8a4bd4313a5d315e1a3f6f70a3b0
+        uses: andersonshatch/scan-and-sca@main
         with:
           # Required inputs
           apiUrl: ${{ secrets.CONTRAST_API_URL }}
