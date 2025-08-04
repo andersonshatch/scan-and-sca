@@ -11,19 +11,19 @@ on:
         default: 'https://app.contrastsecurity.com'
       apiKey:
         description: 'API Key from user settings (required for both actions)'
-        required: true
+        required: false
         type: string
       apiUserName:
         description: 'User name for authentication (required for both actions)'
-        required: true
+        required: false
         type: string
       apiServiceKey:
         description: 'Service Key from user settings (required for both actions)'
-        required: true
+        required: false
         type: string
       orgId:
         description: 'Organization ID from user settings (required for both actions)'
-        required: true
+        required: false
         type: string
 
       # SCA-specific inputs
@@ -172,13 +172,27 @@ on:
         type: boolean
         default: true
 
+    secrets:
+      CONTRAST_API_KEY:
+        description: 'API Key from user settings'
+        required: true
+      CONTRAST_USERNAME:
+        description: 'User name for authentication'
+        required: true
+      CONTRAST_SERVICE_KEY:
+        description: 'Service Key from user settings'
+        required: true
+      CONTRAST_ORG_ID:
+        description: 'Organization ID from user settings'
+        required: true
+
     outputs:
       fingerprint:
         description: "Output from the SCA fingerprint command"
         value: ${{ jobs.sca-scan.outputs.fingerprint }}
 
 jobs:
-  sca-audit:
+  sca-scan:
     runs-on: ubuntu-latest
     if: ${{ inputs.runSca }}
     outputs:
@@ -192,17 +206,17 @@ jobs:
         id: auth-header
         run: |
           # Construct base64 encoded auth header for SCA
-          auth_string="${{ inputs.apiUserName }}:${{ inputs.apiServiceKey }}"
+          auth_string="${{ secrets.CONTRAST_USERNAME }}:${{ secrets.CONTRAST_SERVICE_KEY }}"
           auth_header=$(echo -n "$auth_string" | base64)
           echo "auth_header=$auth_header" >> $GITHUB_OUTPUT
 
       - name: Run Contrast SCA Action
-        id: sca-audit
+        id: sca-scan
         uses: Contrast-Security-OSS/contrast-sca-action@main
         with:
-          apiKey: ${{ inputs.apiKey }}
+          apiKey: ${{ secrets.CONTRAST_API_KEY }}
           authHeader: ${{ steps.auth-header.outputs.auth_header }}
-          orgId: ${{ inputs.orgId }}
+          orgId: ${{ secrets.CONTRAST_ORG_ID }}
           filePath: ${{ inputs.filePath || github.workspace }}
           repositoryId: ${{ inputs.repositoryId }}
           projectGroupId: ${{ inputs.projectGroupId }}
@@ -238,10 +252,10 @@ jobs:
         uses: Contrast-Security-OSS/contrast-local-scan-action@main
         with:
           apiUrl: ${{ inputs.apiUrl }}
-          apiUserName: ${{ inputs.apiUserName }}
-          apiKey: ${{ inputs.apiKey }}
-          apiServiceKey: ${{ inputs.apiServiceKey }}
-          apiOrgId: ${{ inputs.orgId }}
+          apiUserName: ${{ secrets.CONTRAST_USERNAME }}
+          apiKey: ${{ secrets.CONTRAST_API_KEY }}
+          apiServiceKey: ${{ secrets.CONTRAST_SERVICE_KEY }}
+          apiOrgId: ${{ secrets.CONTRAST_ORG_ID }}
           checks: ${{ inputs.checks }}
           codeQuality: ${{ inputs.codeQuality }}
           defaultBranch: ${{ inputs.defaultBranch }}
