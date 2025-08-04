@@ -77,11 +77,6 @@ on:
         description: 'Metadata filter to be passed to the Contrast CLI when running sarif command (SCA)'
         required: false
         type: string
-      ghasEnabled:
-        description: 'When set to true, will upload sarif to the GHAS integration (SCA)'
-        required: false
-        type: boolean
-        default: true
       legacy:
         description: 'When set to true, uses the legacy audit command (SCA)'
         required: false
@@ -159,6 +154,11 @@ on:
         description: 'Resource group to assign newly created projects to'
         required: false
         type: string
+      ghasEnabled:
+        description: 'When set to true, will upload sarif to the GHAS integration'
+        required: false
+        type: boolean
+        default: true
 
       # Action Control
       runSca:
@@ -269,3 +269,8 @@ jobs:
           severity: ${{ inputs.severity }}
           timeout: ${{ inputs.timeout }}
           token: ${{ github.token }}
+      - name: Upload SARIF file
+        if: ${{ inputs.command == 'sarif' && inputs.ghasEnabled == 'true'}}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
