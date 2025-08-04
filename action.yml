@@ -1,213 +1,257 @@
 name: 'Contrast Security Combined Scan'
-description: 'Composite action that runs both Contrast SCA and Local Scan actions'
-branding:
-  icon: shield
-  color: blue
 
-inputs:
-  # Common API Configuration
-  apiUrl:
-    description: 'URL of your Contrast instance'
-    required: true
-    default: 'https://app.contrastsecurity.com'
-  apiKey:
-    description: 'API Key from user settings (required for both actions)'
-    required: true
-  apiUserName:
-    description: 'User name for authentication (required for both actions)'
-    required: true
-  apiServiceKey:
-    description: 'Service Key from user settings (required for both actions)'
-    required: true
-  orgId:
-    description: 'Organization ID from user settings (required for both actions)'
-    required: true
+on:
+  workflow_call:
+    inputs:
+      # Common API Configuration
+      apiUrl:
+        description: 'URL of your Contrast instance'
+        required: false
+        type: string
+        default: 'https://app.contrastsecurity.com'
+      apiKey:
+        description: 'API Key from user settings (required for both actions)'
+        required: true
+        type: string
+      apiUserName:
+        description: 'User name for authentication (required for both actions)'
+        required: true
+        type: string
+      apiServiceKey:
+        description: 'Service Key from user settings (required for both actions)'
+        required: true
+        type: string
+      orgId:
+        description: 'Organization ID from user settings (required for both actions)'
+        required: true
+        type: string
 
-  # SCA-specific inputs
-  filePath:
-    description: 'Specify the directory in which to search for project configuration files (required for SCA)'
-    required: false
-  repositoryId:
-    description: 'The ID of your repo (SCA)'
-    required: false
-  projectGroupId:
-    description: 'The ID of your project Groups (SCA)'
-    required: false
-  applicationId:
-    description: 'The ID of your application (SCA)'
-    required: false
-  ignoreDev:
-    description: 'When set to true, excludes developer dependencies from the results (SCA)'
-    required: false
-  outputSummary:
-    description: 'Defaults to true. When set to true, writes the output of the audit to the GitHub Actions Summary (SCA)'
-    required: false
-    default: 'true'
-  proxy:
-    description: 'When set will pass the proxy url to the contrast cli (SCA)'
-    required: false
-  repoUrl:
-    description: 'When set, will pass the optional repo url parameter to the contrast cli (SCA)'
-    required: false
-  repoName:
-    description: 'When set, will pass the optional repo name parameter to the contrast cli (SCA)'
-    required: false
-  externalId:
-    description: 'When set, will pass the optional external id parameter to the contrast cli (SCA)'
-    required: false
-  auditTimeout:
-    description: 'Sets the timeout for an audit in seconds, Default: 600 (10 minutes) (SCA)'
-    required: false
-    default: '600'
-  metadata:
-    description: 'Metadata filter to be passed to the Contrast CLI when running sarif command (SCA)'
-    required: false
-  ghasEnabled:
-    description: 'When set to true, will upload sarif to the GHAS integration (SCA)'
-    required: false
-    default: 'true'
-  legacy:
-    description: 'When set to true, uses the legacy audit command (SCA)'
-    required: false
-  modifier:
-    description: 'When set this will be added as a suffix to the output file name (SCA)'
-    required: false
-  name:
-    description: 'Contrast project name. If not specified, Contrast uses the file folder name to identify the project or creates a new project (SCA)'
-    required: false
-  command:
-    description: 'Command to run cli with audit/fingerprint/sarif (SCA)'
-    required: false
-    default: 'audit'
+      # SCA-specific inputs
+      filePath:
+        description: 'Specify the directory in which to search for project configuration files (required for SCA)'
+        required: false
+        type: string
+      repositoryId:
+        description: 'The ID of your repo (SCA)'
+        required: false
+        type: string
+      projectGroupId:
+        description: 'The ID of your project Groups (SCA)'
+        required: false
+        type: string
+      applicationId:
+        description: 'The ID of your application (SCA)'
+        required: false
+        type: string
+      ignoreDev:
+        description: 'When set to true, excludes developer dependencies from the results (SCA)'
+        required: false
+        type: boolean
+      outputSummary:
+        description: 'Defaults to true. When set to true, writes the output of the audit to the GitHub Actions Summary (SCA)'
+        required: false
+        type: boolean
+        default: true
+      proxy:
+        description: 'When set will pass the proxy url to the contrast cli (SCA)'
+        required: false
+        type: string
+      repoUrl:
+        description: 'When set, will pass the optional repo url parameter to the contrast cli (SCA)'
+        required: false
+        type: string
+      repoName:
+        description: 'When set, will pass the optional repo name parameter to the contrast cli (SCA)'
+        required: false
+        type: string
+      externalId:
+        description: 'When set, will pass the optional external id parameter to the contrast cli (SCA)'
+        required: false
+        type: string
+      auditTimeout:
+        description: 'Sets the timeout for an audit in seconds, Default: 600 (10 minutes) (SCA)'
+        required: false
+        type: string
+        default: '600'
+      metadata:
+        description: 'Metadata filter to be passed to the Contrast CLI when running sarif command (SCA)'
+        required: false
+        type: string
+      ghasEnabled:
+        description: 'When set to true, will upload sarif to the GHAS integration (SCA)'
+        required: false
+        type: boolean
+        default: true
+      legacy:
+        description: 'When set to true, uses the legacy audit command (SCA)'
+        required: false
+        type: boolean
+      modifier:
+        description: 'When set this will be added as a suffix to the output file name (SCA)'
+        required: false
+        type: string
+      name:
+        description: 'Contrast project name. If not specified, Contrast uses the file folder name to identify the project or creates a new project (SCA)'
+        required: false
+        type: string
+      command:
+        description: 'Command to run cli with audit/fingerprint/sarif (SCA)'
+        required: false
+        type: string
+        default: 'audit'
 
-  # Local Scan-specific inputs
-  checks:
-    description: 'If set, checks will be added to the current commit based on any vulnerabilities found. Requires the "checks: write" permission (Local Scan)'
-    required: false
-    default: false
-  codeQuality:
-    description: 'Set this to true to include code quality rules when executing source code scanner (Local Scan)'
-    required: false
-    default: false
-  defaultBranch:
-    description: 'Set this to true or false explicitly override the default branching behaviour in scan (Local Scan)'
-    required: false
-  label:
-    description: 'Label to associate with the current scan. Defaults to the current ref e.g. refs/heads/main (Local Scan)'
-    required: false
-  memory:
-    description: 'Memory setting passed to the underlying scan engine. Defaulted to 8g (Local Scan)'
-    required: false
-  new:
-    description: 'Set this to true or false to only fail the action on new vulnerabilities (Local Scan)'
-    required: false
-  path:
-    description: 'Path to scan with local scanner. Defaults to the current repository path (Local Scan)'
-    required: false
-  projectName:
-    description: 'Project to associate scan with. Defaults to current github repository name (Local Scan)'
-    required: false
-  strategy:
-    description: 'Used in conjunction with severity or checks, set this value to fail the build based on aggregated project vulnerabilities or scan level. Valid values are "project" or "scan". Defaults to "project" (Local Scan)'
-    required: false
-    default: 'project'
-  timeout:
-    description: 'Execution timeout (in seconds) setting passed to the underlying scan engine. Defaulted to 60 minutes (Local Scan)'
-    required: false
-  token:
-    description: 'GitHub token for GitHub API requests. Defaults to GITHUB_TOKEN (Local Scan)'
-    required: false
-    default: ${{ github.token }}
+      # Local Scan-specific inputs
+      checks:
+        description: 'If set, checks will be added to the current commit based on any vulnerabilities found. Requires the "checks: write" permission (Local Scan)'
+        required: false
+        type: boolean
+        default: false
+      codeQuality:
+        description: 'Set this to true to include code quality rules when executing source code scanner (Local Scan)'
+        required: false
+        type: boolean
+        default: false
+      defaultBranch:
+        description: 'Set this to true or false explicitly override the default branching behaviour in scan (Local Scan)'
+        required: false
+        type: boolean
+      label:
+        description: 'Label to associate with the current scan. Defaults to the current ref e.g. refs/heads/main (Local Scan)'
+        required: false
+        type: string
+      memory:
+        description: 'Memory setting passed to the underlying scan engine. Defaulted to 8g (Local Scan)'
+        required: false
+        type: string
+      new:
+        description: 'Set this to true or false to only fail the action on new vulnerabilities (Local Scan)'
+        required: false
+        type: boolean
+      path:
+        description: 'Path to scan with local scanner. Defaults to the current repository path (Local Scan)'
+        required: false
+        type: string
+      projectName:
+        description: 'Project to associate scan with. Defaults to current github repository name (Local Scan)'
+        required: false
+        type: string
+      strategy:
+        description: 'Used in conjunction with severity or checks, set this value to fail the build based on aggregated project vulnerabilities or scan level. Valid values are "project" or "scan". Defaults to "project" (Local Scan)'
+        required: false
+        type: string
+        default: 'project'
+      timeout:
+        description: 'Execution timeout (in seconds) setting passed to the underlying scan engine. Defaulted to 60 minutes (Local Scan)'
+        required: false
+        type: string
 
-  # Common inputs
-  severity:
-    description: 'Set this to cause the build to fail if vulnerabilities are found exceeding this severity or higher. Valid values are CRITICAL, HIGH, MEDIUM, LOW, NOTE'
-    required: false
-    default: 'CRITICAL'
-  fail:
-    description: 'When set to true, fails the action if CVEs have been detected that match at least the severity option specified'
-    required: false
-  resourceGroup:
-    description: 'Resource group to assign newly created projects to'
-    required: false
+      # Common inputs
+      severity:
+        description: 'Set this to cause the build to fail if vulnerabilities are found exceeding this severity or higher. Valid values are CRITICAL, HIGH, MEDIUM, LOW, NOTE'
+        required: false
+        type: string
+        default: 'CRITICAL'
+      fail:
+        description: 'When set to true, fails the action if CVEs have been detected that match at least the severity option specified'
+        required: false
+        type: boolean
+      resourceGroup:
+        description: 'Resource group to assign newly created projects to'
+        required: false
+        type: string
 
-  # Action Control
-  runSca:
-    description: 'Set to true to run the SCA action'
-    required: false
-    default: 'true'
-  runLocalScan:
-    description: 'Set to true to run the Local Scan action'
-    required: false
-    default: 'true'
+      # Action Control
+      runSca:
+        description: 'Set to true to run the SCA action'
+        required: false
+        type: boolean
+        default: true
+      runLocalScan:
+        description: 'Set to true to run the Local Scan action'
+        required: false
+        type: boolean
+        default: true
 
-outputs:
-  fingerprint:
-    description: "Output from the SCA fingerprint command"
-    value: ${{ steps.sca-scan.outputs.fingerprint }}
+    outputs:
+      fingerprint:
+        description: "Output from the SCA fingerprint command"
+        value: ${{ jobs.sca-scan.outputs.fingerprint }}
 
-runs:
-  using: 'composite'
-  steps:
-    - name: Construct Auth Header
-      id: auth-header
-      shell: bash
-      run: |
-        # Construct base64 encoded auth header for SCA
-        auth_string="${{ inputs.apiUserName }}:${{ inputs.apiServiceKey }}"
-        auth_header=$(echo -n "$auth_string" | base64)
-        echo "auth_header=$auth_header" >> $GITHUB_OUTPUT
+jobs:
+  sca-audit:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.runSca }}
+    outputs:
+      fingerprint: ${{ steps.sca-scan.outputs.fingerprint }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Run Contrast SCA Action
-      id: sca-scan
-      if: ${{ inputs.runSca == 'true' }}
-      uses: Contrast-Security-OSS/contrast-sca-action@main
-      with:
-        apiKey: ${{ inputs.apiKey }}
-        authHeader: ${{ steps.auth-header.outputs.auth_header }}
-        orgId: ${{ inputs.orgId }}
-        filePath: ${{ inputs.filePath || github.workspace }}
-        repositoryId: ${{ inputs.repositoryId }}
-        projectGroupId: ${{ inputs.projectGroupId }}
-        applicationId: ${{ inputs.applicationId }}
-        apiUrl: ${{ inputs.apiUrl }}
-        severity: ${{ inputs.severity }}
-        fail: ${{ inputs.fail }}
-        ignoreDev: ${{ inputs.ignoreDev }}
-        outputSummary: ${{ inputs.outputSummary }}
-        proxy: ${{ inputs.proxy }}
-        repoUrl: ${{ inputs.repoUrl }}
-        repoName: ${{ inputs.repoName }}
-        externalId: ${{ inputs.externalId }}
-        auditTimeout: ${{ inputs.auditTimeout }}
-        metadata: ${{ inputs.metadata }}
-        ghasEnabled: ${{ inputs.ghasEnabled }}
-        legacy: ${{ inputs.legacy }}
-        modifier: ${{ inputs.modifier }}
-        name: ${{ inputs.name }}
-        resourceGroup: ${{ inputs.resourceGroup }}
-        command: ${{ inputs.command }}
+      - name: Construct Auth Header
+        id: auth-header
+        run: |
+          # Construct base64 encoded auth header for SCA
+          auth_string="${{ inputs.apiUserName }}:${{ inputs.apiServiceKey }}"
+          auth_header=$(echo -n "$auth_string" | base64)
+          echo "auth_header=$auth_header" >> $GITHUB_OUTPUT
 
-    - name: Run Contrast Local Scan Action
-      id: local-scan
-      if: ${{ inputs.runLocalScan == 'true' }}
-      uses: Contrast-Security-OSS/contrast-local-scan-action@main
-      with:
-        apiUrl: ${{ inputs.apiUrl }}
-        apiUserName: ${{ inputs.apiUserName }}
-        apiKey: ${{ inputs.apiKey }}
-        apiServiceKey: ${{ inputs.apiServiceKey }}
-        apiOrgId: ${{ inputs.orgId }}
-        checks: ${{ inputs.checks }}
-        codeQuality: ${{ inputs.codeQuality }}
-        defaultBranch: ${{ inputs.defaultBranch }}
-        label: ${{ inputs.label }}
-        memory: ${{ inputs.memory }}
-        new: ${{ inputs.new }}
-        path: ${{ inputs.path }}
-        projectName: ${{ inputs.projectName }}
-        resourceGroup: ${{ inputs.resourceGroup }}
-        strategy: ${{ inputs.strategy }}
-        severity: ${{ inputs.severity }}
-        timeout: ${{ inputs.timeout }}
-        token: ${{ inputs.token }}
+      - name: Run Contrast SCA Action
+        id: sca-audit
+        uses: Contrast-Security-OSS/contrast-sca-action@main
+        with:
+          apiKey: ${{ inputs.apiKey }}
+          authHeader: ${{ steps.auth-header.outputs.auth_header }}
+          orgId: ${{ inputs.orgId }}
+          filePath: ${{ inputs.filePath || github.workspace }}
+          repositoryId: ${{ inputs.repositoryId }}
+          projectGroupId: ${{ inputs.projectGroupId }}
+          applicationId: ${{ inputs.applicationId }}
+          apiUrl: ${{ inputs.apiUrl }}
+          severity: ${{ inputs.severity }}
+          fail: ${{ inputs.fail }}
+          ignoreDev: ${{ inputs.ignoreDev }}
+          outputSummary: ${{ inputs.outputSummary }}
+          proxy: ${{ inputs.proxy }}
+          repoUrl: ${{ inputs.repoUrl }}
+          repoName: ${{ inputs.repoName }}
+          externalId: ${{ inputs.externalId }}
+          auditTimeout: ${{ inputs.auditTimeout }}
+          metadata: ${{ inputs.metadata }}
+          ghasEnabled: ${{ inputs.ghasEnabled }}
+          legacy: ${{ inputs.legacy }}
+          modifier: ${{ inputs.modifier }}
+          name: ${{ inputs.name }}
+          resourceGroup: ${{ inputs.resourceGroup }}
+          command: ${{ inputs.command }}
+
+  local-scan:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.runLocalScan }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Contrast Local Scan Action
+        id: local-scan
+        uses: Contrast-Security-OSS/contrast-local-scan-action@main
+        with:
+          apiUrl: ${{ inputs.apiUrl }}
+          apiUserName: ${{ inputs.apiUserName }}
+          apiKey: ${{ inputs.apiKey }}
+          apiServiceKey: ${{ inputs.apiServiceKey }}
+          apiOrgId: ${{ inputs.orgId }}
+          checks: ${{ inputs.checks }}
+          codeQuality: ${{ inputs.codeQuality }}
+          defaultBranch: ${{ inputs.defaultBranch }}
+          label: ${{ inputs.label }}
+          memory: ${{ inputs.memory }}
+          new: ${{ inputs.new }}
+          path: ${{ inputs.path }}
+          projectName: ${{ inputs.projectName }}
+          resourceGroup: ${{ inputs.resourceGroup }}
+          strategy: ${{ inputs.strategy }}
+          severity: ${{ inputs.severity }}
+          timeout: ${{ inputs.timeout }}
+          token: ${{ github.token }}
