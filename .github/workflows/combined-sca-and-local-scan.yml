@@ -189,14 +189,24 @@ on:
     outputs:
       fingerprint:
         description: "Output from the SCA fingerprint command"
-        value: ${{ jobs.sca-scan.outputs.fingerprint }}
+        value: ${{ jobs.sca-audit.outputs.fingerprint }}
+      sca-audit-success:
+        description: "Whether the SCA scan completed successfully"
+        value: ${{ jobs.sca-audit.outputs.success }}
+      sast-scan-success:
+        description: "Whether the SAST scan completed successfully"
+        value: ${{ jobs.sast-scan.outputs.success }}
+      overall-success:
+        description: "Whether both scans completed successfully"
+        value: ${{ jobs.check-results.outputs.success }}
 
 jobs:
   sca-audit:
     runs-on: ubuntu-latest
     if: ${{ inputs.runSca }}
     outputs:
-      fingerprint: ${{ steps.sca-scan.outputs.fingerprint }}
+      fingerprint: ${{ steps.sca-audit.outputs.fingerprint }}
+      success: ${{ steps.sca-result.outputs.success }}
     
     steps:
       - name: Checkout code
@@ -211,7 +221,8 @@ jobs:
           echo "auth_header=$auth_header" >> $GITHUB_OUTPUT
 
       - name: Run Contrast SCA Action
-        id: sca-scan
+        id: sca-audit
+        continue-on-error: true
         uses: Contrast-Security-OSS/contrast-sca-action@main
         with:
           apiKey: ${{ secrets.CONTRAST_API_KEY }}
@@ -239,16 +250,28 @@ jobs:
           resourceGroup: ${{ inputs.resourceGroup }}
           command: ${{ inputs.command }}
 
+      - name: Set SCA Result
+        id: sca-result
+        run: |
+          if [ "${{ steps.sca-audit.outcome }}" == "success" ]; then
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
+
   sast-scan:
     runs-on: ubuntu-latest
     if: ${{ inputs.runLocalScan }}
+    outputs:
+      success: ${{ steps.scan-result.outputs.success }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Run Contrast Local Scan Action
-        id: local-scan
+        id: sast-scan
+        continue-on-error: true
         uses: Contrast-Security-OSS/contrast-local-scan-action@main
         with:
           apiUrl: ${{ inputs.apiUrl }}
@@ -269,9 +292,54 @@ jobs:
           severity: ${{ inputs.severity }}
           timeout: ${{ inputs.timeout }}
           token: ${{ github.token }}
-        continue-on-error: true
+
       - name: Upload SARIF file
         if: ${{ inputs.ghasEnabled }}
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: results.sarif
+
+      - name: Set SAST Scan Result
+        id: scan-result
+        run: |
+          if [ "${{ steps.sast-scan.outcome }}" == "success" ]; then
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
+
+  check-results:
+    runs-on: ubuntu-latest
+    needs: [sca-audit, sast-scan]
+    if: always()
+    outputs:
+      success: ${{ steps.overall-result.outputs.success }}
+
+    steps:
+      - name: Check Overall Results
+        id: overall-result
+        run: |
+          sca_success="${{ needs.sca-audit.outputs.success }}"
+          sca_skipped="${{ needs.sca-audit.result == 'skipped' }}"
+          scan_success="${{ needs.sast-scan.outputs.success }}"
+          scan_skipped="${{ needs.sast-scan.result == 'skipped' }}"
+
+          echo "SCA Success: $sca_success"
+          echo "SAST Scan Success: $scan_success"
+          echo "SCA Skipped: $sca_skipped"
+          echo "SAST Scan Skipped: $scan_skipped"
+
+          # Consider success if:
+          # - Both scans succeeded, OR
+          # - SCA succeeded and SAST scan was skipped, OR
+          # - SAST scan succeeded and SCA was skipped, OR
+          # - Both were skipped (no scans enabled)
+          if ([ "$sca_success" == "true" ] || [ "$sca_skipped" == "true" ]) && \
+             ([ "$scan_success" == "true" ] || [ "$scan_skipped" == "true" ]); then
+            echo "success=true" >> $GITHUB_OUTPUT
+            echo "Overall result: SUCCESS"
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+            echo "Overall result: FAILURE"
+            exit 1
+          fi
