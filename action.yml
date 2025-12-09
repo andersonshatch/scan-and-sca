@@ -191,7 +191,7 @@ runs:
     - name: Run Contrast Local Scan Action
       id: local-scan
       if: ${{ inputs.runLocalScan == 'true' }}
-      uses: Contrast-Security-OSS/contrast-local-scan-action@main
+      uses: Contrast-Security-OSS/contrast-local-scan-action@v1
       with:
         apiUrl: ${{ inputs.apiUrl }}
         apiUserName: ${{ inputs.apiUserName }}
