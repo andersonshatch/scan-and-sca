@@ -272,7 +272,7 @@ jobs:
       - name: Run Contrast Local Scan Action
         id: sast-scan
         continue-on-error: true
-        uses: Contrast-Security-OSS/contrast-local-scan-action@main
+        uses: Contrast-Security-OSS/contrast-local-scan-action@v1
         with:
           apiUrl: ${{ inputs.apiUrl }}
           apiUserName: ${{ secrets.CONTRAST_USERNAME }}
